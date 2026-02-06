@@ -1,0 +1,168 @@
+{
+  "database_name": "financial_data_pipeline",
+  "tables": [
+    {
+      "name": "entity",
+      "description": "The Legal Structure representing companies.",
+      "columns": [
+        { "name": "cik", "type": "VARCHAR(10)", "primary_key": true, "nullable": false },
+        { "name": "name", "type": "TEXT", "nullable": false },
+        { "name": "lei", "type": "VARCHAR(20)", "nullable": true },
+        { "name": "industry", "type": "TEXT", "nullable": true },
+        { "name": "sector", "type": "VARCHAR(100)", "nullable": true },
+        { "name": "sic_code", "type": "VARCHAR(4)", "nullable": true },
+        { "name": "fiscal_year_end", "type": "VARCHAR(5)", "nullable": true },
+        { "name": "location", "type": "TEXT", "nullable": true },
+        { "name": "website", "type": "TEXT", "nullable": true },
+        { "name": "ceo", "type": "TEXT", "nullable": true },
+        { "name": "founded_year", "type": "SMALLINT", "nullable": true },
+        { "name": "description", "type": "TEXT", "nullable": true },
+        { "name": "status", "type": "VARCHAR(20)", "nullable": false, "default": "'ACTIVE'" },
+        { "name": "entity_type", "type": "TEXT", "nullable": true },
+        { "name": "ein", "type": "TEXT", "nullable": true },
+        { "name": "owner_org", "type": "TEXT", "nullable": true },
+        { "name": "investor_website", "type": "TEXT", "nullable": true },
+        { "name": "category", "type": "TEXT", "nullable": true },
+        { "name": "state_of_incorporation", "type": "TEXT", "nullable": true },
+        { "name": "phone", "type": "TEXT", "nullable": true },
+        { "name": "address", "type": "TEXT", "nullable": true },
+        { "name": "last_seen_at", "type": "DATE", "nullable": true, "default": "'1900-01-01'" },
+        { "name": "ingested_at", "type": "TIMESTAMPTZ", "nullable": false, "default": "now()" }
+      ]
+    },
+    {
+      "name": "security",
+      "description": "The Tradeable Instrument (e.g., Stocks, Bonds).",
+      "columns": [
+        { "name": "id", "type": "SERIAL", "primary_key": true, "nullable": false },
+        { "name": "entity_id", "type": "VARCHAR(10)", "nullable": false, "foreign_key": "entity.cik" },
+        { "name": "symbol", "type": "VARCHAR(12)", "nullable": true },
+        { "name": "exchange", "type": "TEXT", "nullable": true },
+        { "name": "mic", "type": "VARCHAR(4)", "description": "Market Identification Code", "nullable": true },
+        { "name": "valid_from", "type": "DATE", "nullable": false, "default": "CURRENT_DATE" },
+        { "name": "valid_to", "type": "DATE", "nullable": true, "default": "NULL" },
+        { "name": "is_active", "type": "BOOLEAN", "description": "Computed: valid_to IS NULL", "nullable": true },
+        { "name": "figi", "type": "VARCHAR(12)", "nullable": true },
+        { "name": "composite_figi", "type": "VARCHAR(12)", "nullable": true },
+        { "name": "share_class_figi", "type": "VARCHAR(12)", "nullable": true },
+        { "name": "security_type", "type": "VARCHAR(50)", "nullable": true },
+        { "name": "market_sector", "type": "VARCHAR(20)", "nullable": true },
+        { "name": "figi_ticker", "type": "VARCHAR(20)", "nullable": true },
+        { "name": "figi_name", "type": "TEXT", "nullable": true },
+        { "name": "figi_exch_code", "type": "VARCHAR(10)", "nullable": true },
+        { "name": "ingested_at", "type": "TIMESTAMPTZ", "nullable": false, "default": "now()" }
+      ],
+      "constraints": [
+        "UNIQUE(entity_id, symbol, valid_from)"
+      ]
+    },
+    {
+      "name": "filing",
+      "description": "Metadata for SEC filings (10-K, 10-Q, 8-K, etc).",
+      "columns": [
+        { "name": "accession_id", "type": "VARCHAR(20)", "primary_key": true, "nullable": false },
+        { "name": "entity_id", "type": "VARCHAR(10)", "nullable": false, "foreign_key": "entity.cik" },
+        { "name": "filing_date", "type": "DATE", "nullable": false },
+        { "name": "form_type", "type": "VARCHAR(10)", "nullable": false },
+        { "name": "filing_url", "type": "TEXT", "nullable": true },
+        { "name": "is_amendment", "type": "BOOLEAN", "nullable": true, "default": "FALSE" },
+        { "name": "amendment_no", "type": "SMALLINT", "nullable": true, "default": "0" },
+        { "name": "report_date", "type": "DATE", "nullable": true },
+        { "name": "items", "type": "TEXT[]", "nullable": true },
+        { "name": "accepted_at", "type": "TIMESTAMPTZ", "nullable": false },
+        { "name": "ingested_at", "type": "TIMESTAMPTZ", "nullable": false, "default": "now()" }
+      ]
+    },
+    {
+      "name": "fact",
+      "description": "Fundamental Data Points (The Core Financials). Partitioned by period_end.",
+      "columns": [
+        { "name": "entity_id", "type": "VARCHAR(10)", "nullable": false },
+        { "name": "accession_id", "type": "VARCHAR(20)", "nullable": false },
+        { "name": "concept", "type": "TEXT", "nullable": false },
+        { "name": "standard_concept", "type": "VARCHAR(100)", "nullable": false },
+        { "name": "priority", "type": "SMALLINT", "nullable": true, "default": "0" },
+        { "name": "label", "type": "TEXT", "nullable": true },
+        { "name": "value", "type": "TEXT", "nullable": true },
+        { "name": "numeric_value", "type": "DOUBLE PRECISION", "nullable": true },
+        { "name": "unit", "type": "VARCHAR(10)", "nullable": false },
+        { "name": "period_start", "type": "DATE", "nullable": true },
+        { "name": "period_end", "type": "DATE", "nullable": false },
+        { "name": "fiscal_year", "type": "SMALLINT", "nullable": true },
+        { "name": "fiscal_period", "type": "VARCHAR(10)", "nullable": true },
+        { "name": "frame", "type": "VARCHAR(20)", "nullable": true },
+        { "name": "statement_type", "type": "VARCHAR(20)", "nullable": true },
+        { "name": "confidence_score", "type": "DOUBLE PRECISION", "nullable": true },
+        { "name": "is_negative", "type": "BOOLEAN", "nullable": true, "default": "FALSE" },
+        { "name": "is_audited", "type": "BOOLEAN", "nullable": true, "default": "FALSE" },
+        { "name": "is_estimated", "type": "BOOLEAN", "nullable": true, "default": "FALSE" },
+        { "name": "data_quality", "type": "TEXT", "nullable": true },
+        { "name": "knowledge_at", "type": "TIMESTAMPTZ", "nullable": false },
+        { "name": "ingested_at", "type": "TIMESTAMPTZ", "nullable": false, "default": "now()" }
+      ]
+    },
+    {
+      "name": "corporate_action",
+      "description": "Splits and Dividends events.",
+      "columns": [
+        { "name": "action_id", "type": "VARCHAR(50)", "primary_key": true, "nullable": false },
+        { "name": "entity_id", "type": "VARCHAR(10)", "nullable": false },
+        { "name": "ticker", "type": "VARCHAR(10)", "nullable": false },
+        { "name": "ex_date", "type": "DATE", "nullable": false },
+        { "name": "action_type", "type": "VARCHAR(20)", "description": "'SPLIT' or 'DIVIDEND_CASH'", "nullable": false },
+        { "name": "ratio", "type": "DOUBLE PRECISION", "nullable": true },
+        { "name": "amount", "type": "DOUBLE PRECISION", "nullable": true },
+        { "name": "status", "type": "VARCHAR(20)", "nullable": true, "default": "'PENDING'" },
+        { "name": "source_type", "type": "VARCHAR(20)", "nullable": true },
+        { "name": "raw_text", "type": "TEXT", "nullable": true },
+        { "name": "created_at", "type": "TIMESTAMPTZ", "nullable": true, "default": "NOW()" },
+        { "name": "updated_at", "type": "TIMESTAMPTZ", "nullable": true, "default": "NOW()" }
+      ],
+      "constraints": [
+        "UNIQUE(entity_id, ex_date, action_type)"
+      ]
+    },
+    {
+      "name": "index_membership",
+      "description": "Historical record of index components (e.g., S&P 500).",
+      "columns": [
+        { "name": "id", "type": "SERIAL", "primary_key": true, "nullable": false },
+        { "name": "entity_id", "type": "VARCHAR(10)", "nullable": false, "foreign_key": "entity.cik" },
+        { "name": "symbol", "type": "VARCHAR(12)", "nullable": false },
+        { "name": "index_name", "type": "VARCHAR(20)", "nullable": false },
+        { "name": "added_at", "type": "DATE", "nullable": false },
+        { "name": "removed_at", "type": "DATE", "nullable": true, "default": "NULL" }
+      ],
+      "constraints": [
+        "UNIQUE(entity_id, symbol, index_name)"
+      ]
+    },
+    {
+      "name": "taxonomy_guide",
+      "description": "The standardized dictionary of financial concepts.",
+      "columns": [
+        { "name": "standard_concept", "type": "TEXT", "primary_key": true, "nullable": false },
+        { "name": "human_name", "type": "TEXT", "nullable": true },
+        { "name": "definition", "type": "TEXT", "nullable": true },
+        { "name": "unit_type", "type": "VARCHAR(20)", "nullable": true },
+        { "name": "balance_type", "type": "VARCHAR(10)", "nullable": true },
+        { "name": "source_reference", "type": "TEXT", "nullable": true }
+      ]
+    },
+    {
+      "name": "concept_mapping",
+      "description": "Maps raw XBRL tags to standard concepts.",
+      "columns": [
+        { "name": "id", "type": "SERIAL", "primary_key": true, "nullable": false },
+        { "name": "xbrl_tag", "type": "VARCHAR(255)", "nullable": false },
+        { "name": "standard_concept", "type": "VARCHAR(100)", "nullable": false },
+        { "name": "statement_type", "type": "VARCHAR(50)", "nullable": false },
+        { "name": "priority", "type": "SMALLINT", "nullable": false, "default": "1" },
+        { "name": "description", "type": "TEXT", "nullable": true }
+      ],
+      "constraints": [
+        "UNIQUE(xbrl_tag)"
+      ]
+    }
+  ]
+}
